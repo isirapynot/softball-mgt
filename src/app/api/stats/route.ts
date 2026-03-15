@@ -34,6 +34,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const game_id = searchParams.get('game_id');
 
+  // Comma-separated seasons, e.g. "Spring 2025,Summer 2025" — empty = all time
+  const seasonParam = searchParams.get('season');
+  const seasons = seasonParam
+    ? seasonParam.split(',').map(s => decodeURIComponent(s.trim())).filter(Boolean)
+    : [];
+
   if (game_id) {
     // Per-game: every player with their stats (zeros if none entered yet),
     // sorted by batting order slot then name.
@@ -60,27 +66,56 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows);
   }
 
-  // Season totals: aggregate across all games, only players with at least 1 AB
-  const [rows] = await pool.query(
-    `SELECT
-       p.id as player_id,
-       p.name as player_name,
-       COUNT(DISTINCT bs.game_id)  as games,
-       COALESCE(SUM(bs.ab), 0)      as ab,
-       COALESCE(SUM(bs.h), 0)       as h,
-       COALESCE(SUM(bs.doubles), 0) as doubles,
-       COALESCE(SUM(bs.triples), 0) as triples,
-       COALESCE(SUM(bs.hr), 0)      as hr,
-       COALESCE(SUM(bs.r), 0)       as r,
-       COALESCE(SUM(bs.rbi), 0)     as rbi,
-       COALESCE(SUM(bs.bb), 0)      as bb,
-       COALESCE(SUM(bs.k), 0)       as k
-     FROM players p
-     LEFT JOIN batting_stats bs ON bs.player_id = p.id
-     GROUP BY p.id
-     HAVING ab > 0
-     ORDER BY (SUM(bs.h) / NULLIF(SUM(bs.ab), 0)) DESC, p.name ASC`
-  );
+  // Season totals: aggregate across all games (or selected seasons)
+  let rows;
+  if (seasons.length > 0) {
+    // Filter to selected seasons using IN (...)
+    const placeholders = seasons.map(() => '?').join(', ');
+    [rows] = await pool.query(
+      `SELECT
+         p.id as player_id,
+         p.name as player_name,
+         COUNT(DISTINCT bs.game_id)  as games,
+         COALESCE(SUM(bs.ab), 0)      as ab,
+         COALESCE(SUM(bs.h), 0)       as h,
+         COALESCE(SUM(bs.doubles), 0) as doubles,
+         COALESCE(SUM(bs.triples), 0) as triples,
+         COALESCE(SUM(bs.hr), 0)      as hr,
+         COALESCE(SUM(bs.r), 0)       as r,
+         COALESCE(SUM(bs.rbi), 0)     as rbi,
+         COALESCE(SUM(bs.bb), 0)      as bb,
+         COALESCE(SUM(bs.k), 0)       as k
+       FROM players p
+       JOIN batting_stats bs ON bs.player_id = p.id
+       JOIN games g ON g.id = bs.game_id AND g.season IN (${placeholders})
+       GROUP BY p.id
+       HAVING ab > 0
+       ORDER BY (SUM(bs.h) / NULLIF(SUM(bs.ab), 0)) DESC, p.name ASC`,
+      seasons
+    );
+  } else {
+    // All-time totals
+    [rows] = await pool.query(
+      `SELECT
+         p.id as player_id,
+         p.name as player_name,
+         COUNT(DISTINCT bs.game_id)  as games,
+         COALESCE(SUM(bs.ab), 0)      as ab,
+         COALESCE(SUM(bs.h), 0)       as h,
+         COALESCE(SUM(bs.doubles), 0) as doubles,
+         COALESCE(SUM(bs.triples), 0) as triples,
+         COALESCE(SUM(bs.hr), 0)      as hr,
+         COALESCE(SUM(bs.r), 0)       as r,
+         COALESCE(SUM(bs.rbi), 0)     as rbi,
+         COALESCE(SUM(bs.bb), 0)      as bb,
+         COALESCE(SUM(bs.k), 0)       as k
+       FROM players p
+       LEFT JOIN batting_stats bs ON bs.player_id = p.id
+       GROUP BY p.id
+       HAVING ab > 0
+       ORDER BY (SUM(bs.h) / NULLIF(SUM(bs.ab), 0)) DESC, p.name ASC`
+    );
+  }
   return NextResponse.json(rows);
 }
 

@@ -29,15 +29,15 @@ interface StatRow {
 }
 
 const STAT_COLS = [
-  { key: 'ab',      label: 'AB',  title: 'At Bats' },
-  { key: 'h',       label: 'H',   title: 'Hits' },
-  { key: 'doubles', label: '2B',  title: 'Doubles' },
-  { key: 'triples', label: '3B',  title: 'Triples' },
-  { key: 'hr',      label: 'HR',  title: 'Home Runs' },
-  { key: 'r',       label: 'R',   title: 'Runs' },
-  { key: 'rbi',     label: 'RBI', title: 'Runs Batted In' },
-  { key: 'bb',      label: 'BB',  title: 'Walks' },
-  { key: 'k',       label: 'K',   title: 'Strikeouts' },
+  { key: 'ab',      label: 'AB',  title: 'At Bats',        highlight: false },
+  { key: 'h',       label: 'H',   title: 'Hits',           highlight: false },
+  { key: 'doubles', label: '2B',  title: 'Doubles',        highlight: false },
+  { key: 'triples', label: '3B',  title: 'Triples',        highlight: false },
+  { key: 'hr',      label: 'HR',  title: 'Home Runs',      highlight: false },
+  { key: 'r',       label: 'R',   title: 'Runs',           highlight: true  },
+  { key: 'rbi',     label: 'RBI', title: 'Runs Batted In', highlight: true  },
+  { key: 'bb',      label: 'BB',  title: 'Walks',          highlight: false },
+  { key: 'k',       label: 'K',   title: 'Strikeouts',     highlight: false },
 ] as const;
 
 type StatKey = typeof STAT_COLS[number]['key'];
@@ -176,7 +176,7 @@ export default function StatsEntryPage() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600 sticky left-0 bg-gray-50">#</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600 sticky left-8 bg-gray-50">Player</th>
                 {STAT_COLS.map(col => (
-                  <th key={col.key} title={col.title} className="px-2 py-3 font-semibold text-gray-600 text-center w-14">
+                  <th key={col.key} title={col.title} className={`px-2 py-3 font-semibold text-gray-600 text-center w-14${col.highlight ? ' bg-gray-200' : ''}`}>
                     {col.label}
                   </th>
                 ))}
@@ -200,7 +200,7 @@ export default function StatsEntryPage() {
                       {p.player_name}
                     </td>
                     {STAT_COLS.map(col => (
-                      <td key={col.key} className="px-2 py-2 text-center">
+                      <td key={col.key} className={`px-2 py-2 text-center${col.highlight ? ' bg-gray-100' : ''}`}>
                         <input
                           type="number"
                           min={0}

@@ -76,3 +76,4 @@ CREATE TABLE IF NOT EXISTS availability (
   FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
   FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 );
+
